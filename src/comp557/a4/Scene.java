@@ -5,6 +5,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import javax.vecmath.Color3f;
+import javax.vecmath.Point3d;
+import javax.vecmath.Vector3d;
 
 /**
  * Simple scene loader based on XML file format.
@@ -45,16 +47,30 @@ public class Scene {
             for ( int j = 0; j < w && !render.isDone(); j++ ) {
             	
                 // TODO: Objective 1: generate a ray (use the generateRay method)
-            	
+            	Ray ray = new Ray();
+            	generateRay(i, j, new double[] { 0.0, 0.0 }, cam, ray);
                 // TODO: Objective 2: test for intersection with scene surfaces
             	
                 // TODO: Objective 3: compute the shaded result for the intersection point (perhaps requiring shadow rays)
                 
             	// Here is an example of how to calculate the pixel value.
+
+        		final int imgWidth 			= cam.imageSize.width;
+        		final int imgHeight 		= cam.imageSize.height;
+        		final double aspectRatio 	= (double) imgWidth / (double) imgHeight;
+        		double d = 10; //TEST
+        		double fovy = Math.toRadians( 45 ); //TEST
+        		double tanTerm 			= Math.tan( fovy / 2.0 );
+        		double viewPlaneHeight 	= d / ( 2 * tanTerm );
+        		double viewPlaneWidth 	= viewPlaneHeight * aspectRatio;
+
+            	double rayX = 2.0 * ray.viewDirection.x / viewPlaneWidth;
+            	double rayY = 2.0 * ray.viewDirection.y / viewPlaneHeight;
+            	
             	Color3f c = new Color3f(render.bgcolor);
-            	int r = (int)(255*c.x);
-                int g = (int)(255*c.y);
-                int b = (int)(255*c.z);
+            	int r = (int)(255*( 0.0 + rayX + 1.0 )/2.0);
+                int g = (int)(255*( 0.0 + rayY + 1.0 )/2.0);
+                int b = (int)(255*0);
                 int a = 255;
                 int argb = (a<<24 | r<<16 | g<<8 | b);    
                 
@@ -81,9 +97,41 @@ public class Scene {
      * @param ray Contains the generated ray.
      */
 	public static void generateRay(final int i, final int j, final double[] offset, final Camera cam, Ray ray) {
+
+		final int imgWidth 			= cam.imageSize.width;
+		final int imgHeight 		= cam.imageSize.height;
+		final double aspectRatio 	= (double) imgWidth / (double) imgHeight;
 		
-		// TODO: Objective 1: generate rays given the provided parmeters
+		Point3d e = new Point3d( 0, 0, -10 ); //TEST
+		Vector3d u = new Vector3d( 1, 0, 0 ); // TEST 
+		Vector3d v = new Vector3d( 0, 1, 0 ); // TEST 
+		Vector3d w = new Vector3d( 0, 0, 1 ); // TEST 
+		double d = 10; //TEST
+		double fovy = Math.toRadians( 45 ); //TEST
 		
+		double tanTerm 			= Math.tan( fovy / 2.0 );
+		double viewPlaneHeight 	= d / ( 2 * tanTerm );
+		double viewPlaneWidth 	= viewPlaneHeight * aspectRatio;
+		
+		double scalar_u = ( ( (float)j / (float)imgWidth - 0.5f ) * viewPlaneWidth ); //TODO offset
+		double scalar_v = ( ( (float)i / (float)imgHeight - 0.5f ) * viewPlaneHeight ); //TODO offset
+		
+		Vector3d rayDir = new Vector3d();
+		Vector3d temp	= new Vector3d();
+		
+		temp.set( u );
+		temp.scale( scalar_u );
+		rayDir.add( temp );
+
+		temp.set( v );
+		temp.scale( scalar_v );
+		rayDir.add( temp );
+		
+		temp.set( w );
+		temp.scale( -d );
+		rayDir.add( temp );
+		
+		ray.set( e, rayDir );
 	}
 
 	/**

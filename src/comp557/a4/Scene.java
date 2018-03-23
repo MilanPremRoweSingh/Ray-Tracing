@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Vector;
+
 import javax.vecmath.Color3f;
 import javax.vecmath.Point3d;
 import javax.vecmath.Vector3d;
@@ -58,7 +60,10 @@ public class Scene {
         		final int imgWidth 			= cam.imageSize.width;
         		final int imgHeight 		= cam.imageSize.height;
         		final double aspectRatio 	= (double) imgWidth / (double) imgHeight;
-        		double d = 10; //TEST
+        		
+        		Point3d e = cam.from;
+        		Vector3d w0 	= new Vector3d( e.x - cam.to.x, e.y - cam.to.y, e.z - cam.to.z ); //w points away from lookat point at eye point
+        		double d 	= w0.length();
         		double fovy = Math.toRadians( 45 ); //TEST
         		double tanTerm 			= Math.tan( fovy / 2.0 );
         		double viewPlaneHeight 	= d / ( 2 * tanTerm );
@@ -102,19 +107,32 @@ public class Scene {
 		final int imgHeight 		= cam.imageSize.height;
 		final double aspectRatio 	= (double) imgWidth / (double) imgHeight;
 		
-		Point3d e = new Point3d( 0, 0, -10 ); //TEST
-		Vector3d u = new Vector3d( 1, 0, 0 ); // TEST 
-		Vector3d v = new Vector3d( 0, 1, 0 ); // TEST 
-		Vector3d w = new Vector3d( 0, 0, 1 ); // TEST 
-		double d = 10; //TEST
-		double fovy = Math.toRadians( 45 ); //TEST
+		//Point3d e = new Point3d( 0, 0, -10 ); //TEST
+		//Vector3d u = new Vector3d( 1, 0, 0 ); // TEST 
+		//Vector3d v = new Vector3d( 0, 1, 0 ); // TEST 
+		//Vector3d w = new Vector3d( 0, 0, 1 ); // TEST 
+		//double d = 10; //TEST
+		//double fovy = Math.toRadians( 45 ); //Test
+		
+		Point3d e = cam.from;
+		
+		Vector3d w 	= new Vector3d( e.x - cam.to.x, e.y - cam.to.y, e.z - cam.to.z ); //w points away from lookat point at eye point
+		double d 	= w.length();
+		w.normalize(); //Normalize as it is a frame axis
+		
+		Vector3d v = cam.up;
+		Vector3d u = new Vector3d();
+		u.cross( v, w );
+		u.normalize();
+		
+		double fovy = Math.toRadians( cam.fovy ); 
 		
 		double tanTerm 			= Math.tan( fovy / 2.0 );
 		double viewPlaneHeight 	= d / ( 2 * tanTerm );
 		double viewPlaneWidth 	= viewPlaneHeight * aspectRatio;
 		
 		double scalar_u = ( ( (float)j / (float)imgWidth - 0.5f ) * viewPlaneWidth ); //TODO offset
-		double scalar_v = ( ( (float)i / (float)imgHeight - 0.5f ) * viewPlaneHeight ); //TODO offset
+		double scalar_v = ( ( (float)( imgHeight - i ) / (float)imgHeight - 0.5f ) * viewPlaneHeight ); //TODO offset
 		
 		Vector3d rayDir = new Vector3d();
 		Vector3d temp	= new Vector3d();

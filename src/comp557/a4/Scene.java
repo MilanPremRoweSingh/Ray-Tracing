@@ -38,7 +38,7 @@ public class Scene {
      * renders the scene
      */
     public void render(boolean showPanel) {
- 
+
         Camera cam = render.camera; 
         int w = cam.imageSize.width;
         int h = cam.imageSize.height;
@@ -52,6 +52,33 @@ public class Scene {
             	Ray ray = new Ray();
             	generateRay(i, j, new double[] { 0.0, 0.0 }, cam, ray);
                 // TODO: Objective 2: test for intersection with scene surfaces
+            	ArrayList<IntersectResult> results = new ArrayList<IntersectResult>( surfaceList.size() );
+            	
+            	Color3f c = new Color3f(render.bgcolor);
+            	int r = (int)(255*c.x);
+                int g = (int)(255*c.y);
+                int b = (int)(255*c.z);
+                int a = 255;
+                int argb = (a<<24 | r<<16 | g<<8 | b);   
+                
+            	for( Intersectable curr : surfaceList )
+            	{
+            		IntersectResult result = new IntersectResult();
+            		
+            		curr.intersect( ray, result );
+            		
+            		results.add( result );
+            		
+            		if( result.t < Double.POSITIVE_INFINITY )
+            		{
+            			c = new Color3f( 1, 1, 1 );
+            			r = (int)(255*c.x);
+                        g = (int)(255*c.y);
+                        b = (int)(255*c.z);
+                        a = 255;
+                        argb = (a<<24 | r<<16 | g<<8 | b);   
+            		}
+            	}
             	
                 // TODO: Objective 3: compute the shaded result for the intersection point (perhaps requiring shadow rays)
                 
@@ -62,12 +89,7 @@ public class Scene {
         		rayDir.normalize(ray.viewDirection);
         		
         		
-            	Color3f c = new Color3f(render.bgcolor);
-            	int r = (int)(255*( 0.0 + rayDir.x + 1.0 )/2.0);
-                int g = (int)(255*( 0.0 + rayDir.y + 1.0 )/2.0);
-                int b = (int)(255*0);
-                int a = 255;
-                int argb = (a<<24 | r<<16 | g<<8 | b);    
+            	 
                 
                 // update the render image
                 render.setPixel(j, i, argb);
@@ -78,8 +100,7 @@ public class Scene {
         render.save();
         
         // wait for render viewer to close
-        render.waitDone();
-        
+        render.waitDone();        
     }
     
     /**
@@ -141,7 +162,51 @@ public class Scene {
 		
 		ray.set( e, rayDir );
 	}
+	
+	public void testRayGeneration( boolean showPanel ) //Call in render to draw rayDir x,y as image r,b
+	{
+		Camera cam = render.camera; 
+        int w = cam.imageSize.width;
+        int h = cam.imageSize.height;
+        
+        render.init(w, h, showPanel);
+        
+        for ( int i = 0; i < h && !render.isDone(); i++ ) {
+            for ( int j = 0; j < w && !render.isDone(); j++ ) {
+            	
+                // TODO: Objective 1: generate a ray (use the generateRay method)
+            	Ray ray = new Ray();
+            	generateRay(i, j, new double[] { 0.0, 0.0 }, cam, ray);
+                // TODO: Objective 2: test for intersection with scene surfaces
+            	
+                // TODO: Objective 3: compute the shaded result for the intersection point (perhaps requiring shadow rays)
+                
+            	// Here is an example of how to calculate the pixel value.
 
+
+        		Vector3d rayDir = new Vector3d();
+        		rayDir.normalize(ray.viewDirection);
+        		
+        		
+            	Color3f c = new Color3f(render.bgcolor);
+            	int r = (int)(255*( 0.0 + rayDir.x + 1.0 )/2.0);
+                int g = (int)(255*( 0.0 + rayDir.y + 1.0 )/2.0);
+                int b = (int)(255*( 0.0 ));
+                int a = 255;
+                int argb = (a<<24 | r<<16 | g<<8 | b);    
+                
+                // update the render image
+                render.setPixel(j, i, argb);
+            }
+        }
+        
+        // save the final render image
+        render.save();
+        
+        // wait for render viewer to close
+        render.waitDone();
+        
+    }
 	/**
 	 * Shoot a shadow ray in the scene and get the result.
 	 * 

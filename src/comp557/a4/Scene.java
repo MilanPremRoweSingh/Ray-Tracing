@@ -57,24 +57,14 @@ public class Scene {
                 
             	// Here is an example of how to calculate the pixel value.
 
-        		final int imgWidth 			= cam.imageSize.width;
-        		final int imgHeight 		= cam.imageSize.height;
-        		final double aspectRatio 	= (double) imgWidth / (double) imgHeight;
-        		
-        		Point3d e = cam.from;
-        		Vector3d w0 	= new Vector3d( e.x - cam.to.x, e.y - cam.to.y, e.z - cam.to.z ); //w points away from lookat point at eye point
-        		double d 	= w0.length();
-        		double fovy = Math.toRadians( 45 ); //TEST
-        		double tanTerm 			= Math.tan( fovy / 2.0 );
-        		double viewPlaneHeight 	= d / ( 2 * tanTerm );
-        		double viewPlaneWidth 	= viewPlaneHeight * aspectRatio;
 
-            	double rayX = 2.0 * ray.viewDirection.x / viewPlaneWidth;
-            	double rayY = 2.0 * ray.viewDirection.y / viewPlaneHeight;
-            	
+        		Vector3d rayDir = new Vector3d();
+        		rayDir.normalize(ray.viewDirection);
+        		
+        		
             	Color3f c = new Color3f(render.bgcolor);
-            	int r = (int)(255*( 0.0 + rayX + 1.0 )/2.0);
-                int g = (int)(255*( 0.0 + rayY + 1.0 )/2.0);
+            	int r = (int)(255*( 0.0 + rayDir.x + 1.0 )/2.0);
+                int g = (int)(255*( 0.0 + rayDir.y + 1.0 )/2.0);
                 int b = (int)(255*0);
                 int a = 255;
                 int argb = (a<<24 | r<<16 | g<<8 | b);    

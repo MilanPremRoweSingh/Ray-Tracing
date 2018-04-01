@@ -39,8 +39,18 @@ public class Sphere extends Intersectable {
     	this.material = material;
     }
     
+    boolean first = true; //TEST
+    
     @Override
     public void intersect( Ray ray, IntersectResult result ) {
+    	
+    	if ( first )
+    	{
+    		first = !first;
+        	center.x += 4;
+        	center.y -= 4;
+    	}
+    	
     	if( ray == null )
     		return;
     	
@@ -52,9 +62,12 @@ public class Sphere extends Intersectable {
     	//	2) point p is on sphere: ||p||^2 - r = 0
     	//  Solve for t in dot( ( eye + t*rayDir ), ( eye + t*rayDir ) ) = r -> Quadratic Equation
     	
+    	
     	//TEST SPhere at origin
-    	Vector3d	d = ray.viewDirection;
-    	Point3d		p = ray.eyePoint; // TODO: - sphere centre
+    	Vector3d	d = new Vector3d( ray.viewDirection );
+    	Point3d		p = new Point3d( ray.eyePoint );
+    	p.sub( center );
+    	
     	
     	double pMag = localDot( p, p );	
     	double dMag = localDot( d, d );	
@@ -68,8 +81,10 @@ public class Sphere extends Intersectable {
     		
     		double t = ( t_minus > thresholdErr ) ? t_minus : ( t_plus > thresholdErr ) ? t_plus : Double.POSITIVE_INFINITY;
     		result.t = t;
-    		result.n = new Vector3d( p.x + d.x*t, p.y + d.y*t, p.z + d.z*t );//TODO: adjust for non centered spheres
-    		result.p = new Point3d( p.x + d.x*t, p.y + d.y*t, p.z + d.z*t ); //TODO: adjust for non centered spheres
+    		result.n = new Vector3d( p.x + d.x*t, p.y + d.y*t, p.z + d.z*t );
+    		result.n.normalize();
+    		result.p = new Point3d( p.x + d.x*t, p.y + d.y*t, p.z + d.z*t ); 
+    		result.material = material;
     	}
     	
     }

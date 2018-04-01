@@ -1,12 +1,15 @@
 package comp557.a4;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Vector;
 
 import javax.vecmath.Color3f;
+import javax.vecmath.Color4f;
 import javax.vecmath.Point3d;
 import javax.vecmath.Vector3d;
 
@@ -52,7 +55,6 @@ public class Scene {
             	Ray ray = new Ray();
             	generateRay(i, j, new double[] { 0.0, 0.0 }, cam, ray);
                 // TODO: Objective 2: test for intersection with scene surfaces
-            	ArrayList<IntersectResult> results = new ArrayList<IntersectResult>( surfaceList.size() );
             	
             	Color3f c = new Color3f(render.bgcolor);
             	int r = (int)(255*c.x);
@@ -61,24 +63,21 @@ public class Scene {
                 int a = 255;
                 int argb = (a<<24 | r<<16 | g<<8 | b);   
                 
+                IntersectResult result = null;
+                double t = Double.POSITIVE_INFINITY;
             	for( Intersectable curr : surfaceList )
             	{
-            		IntersectResult result = new IntersectResult();
+            		IntersectResult temp = new IntersectResult();
+            		curr.intersect( ray, temp );
             		
-            		curr.intersect( ray, result );
-            		
-            		results.add( result );
-            		
-            		if( result.t < Double.POSITIVE_INFINITY )
+            		if ( temp.t < t ) 
             		{
-            			c = new Color3f( 1, 1, 1 );
-            			r = (int)(255*c.x);
-                        g = (int)(255*c.y);
-                        b = (int)(255*c.z);
-                        a = 255;
-                        argb = (a<<24 | r<<16 | g<<8 | b);   
+            			t = temp.t;
+            			result = temp;
             		}
             	}
+            	
+            	
             	
                 // TODO: Objective 3: compute the shaded result for the intersection point (perhaps requiring shadow rays)
                 
@@ -89,9 +88,92 @@ public class Scene {
         		rayDir.normalize(ray.viewDirection);
         		
         		
-            	 
+        		double lightingR = 0.0;
+        		double lightingG = 0.0;
+        		double lightingB = 0.0;
+        		
+        		
+        		if( result != null )
+        		{
+	        		for( Light light : lights.values() )
+	        		{
+	        			Vector3d shadowRayDir = new Vector3d();
+	        			shadowRayDir.sub( result.p );
+	        			shadowRayDir.add( light.from );
+	        			
+	        			Point3d origin = new Point3d();
+	        			origin.add(shadowRayDir);
+	        			origin.scale( 1e-4 );
+	        			origin.add( result.p );
+	        			Ray shadowRay = new Ray( origin, shadowRayDir );
+	        			
+	        			t = Double.POSITIVE_INFINITY;
+	        			for( Intersectable curr : surfaceList )
+	                	{
+	                		IntersectResult temp = new IntersectResult();
+	                		curr.intersect( shadowRay, temp );
+	                		
+	                		if ( temp.t < t ) 
+	                		{
+	                			t = temp.t;
+	                		}
+	                	}
+	        			
+	        			boolean shaded = false;
+	        			if( t < Double.POSITIVE_INFINITY ) //TEST without shading
+	        			{
+	        				Vector3d originToIntersectable 	= new Vector3d();
+	        				originToIntersectable.add( shadowRayDir );
+	        				originToIntersectable.scale( t );
+	        				
+	        				shaded = ( originToIntersectable.lengthSquared() < shadowRayDir.lengthSquared() ); //Use lengthSquared as its cheaper
+	        			}
+	        			
+	        			if( !shaded )
+	        			{
+	        				Vector3d v = new Vector3d( ray.viewDirection );
+	        				v.scale( -1.0 );
+	        				v.normalize();
+	        				
+	        				Vector3d l = new Vector3d( shadowRayDir );
+	        				l.normalize();
+	        				
+	        				Vector3d half = new Vector3d();
+	        				half.add( l );
+	        				half.add( v );
+	        				half.normalize();
+	        				
+	        				
+	        				
+	        				double diffuseIntensity = Math.max( 0,Sphere.localDot( result.n, l ) ); 
+	        				double specularIntensity = Math.pow( Math.max( 0,Sphere.localDot( result.n, half ) ), result.material.shinyness ); 
+	        				//double intensity = localDot( result.n, );
+	                		Color4f diffuseColour 	= result.material.diffuse;//new Color3f( 1,1,1 );
+	                		Color4f specularColour 	= result.material.specular;//new Color3f( 1,1,1 );
+	                    	lightingR += light.power * light.color.x * ( diffuseColour.x*diffuseIntensity + specularColour.x*specularIntensity );
+	                        lightingG += light.power * light.color.y * ( diffuseColour.y*diffuseIntensity + specularColour.y*specularIntensity );
+	                        lightingB += light.power * light.color.z * ( diffuseColour.z*diffuseIntensity + specularColour.z*specularIntensity );
+	        			}
+	        			
+                    	lightingR += light.power * light.color.x * ( result.material.diffuse.x * ambient.x);
+                        lightingG += light.power * light.color.y * ( result.material.diffuse.y * ambient.y);
+                        lightingB += light.power * light.color.z * ( result.material.diffuse.z * ambient.z);
+	        		}
+        		}
+        		else
+        		{
+        			lightingR = render.bgcolor.x;
+        			lightingG = render.bgcolor.y;
+        			lightingB = render.bgcolor.z;
+        		}
+        		
+            	r = (int)(255*( Math.min( lightingR, 1.0 ) ) );
+                g = (int)(255*( Math.min( lightingG, 1.0 ) ) );
+                b = (int)(255*( Math.min( lightingB, 1.0 ) ) );
                 
                 // update the render image
+                a = 255;
+                argb = (a<<24 | r<<16 | g<<8 | b);   
                 render.setPixel(j, i, argb);
             }
         }
@@ -118,23 +200,18 @@ public class Scene {
 		final int imgHeight 		= cam.imageSize.height;
 		final double aspectRatio 	= (double) imgWidth / (double) imgHeight;
 		
-		//Point3d e = new Point3d( 0, 0, -10 ); //TEST
-		//Vector3d u = new Vector3d( 1, 0, 0 ); // TEST 
-		//Vector3d v = new Vector3d( 0, 1, 0 ); // TEST 
-		//Vector3d w = new Vector3d( 0, 0, 1 ); // TEST 
-		//double d = 10; //TEST
-		//double fovy = Math.toRadians( 45 ); //Test
-		
 		Point3d e = cam.from;
 		
 		Vector3d w 	= new Vector3d( e.x - cam.to.x, e.y - cam.to.y, e.z - cam.to.z ); //w points away from lookat point at eye point
 		double d 	= w.length();
 		w.normalize(); //Normalize as it is a frame axis
 		
-		Vector3d v = cam.up;
+		Vector3d v = new Vector3d( cam.up );
+		v.normalize();
 		Vector3d u = new Vector3d();
 		u.cross( v, w );
 		u.normalize();
+		v.cross( w, u );
 		
 		double fovy = Math.toRadians( cam.fovy ); 
 		
@@ -180,7 +257,42 @@ public class Scene {
                 // TODO: Objective 2: test for intersection with scene surfaces
             	
                 // TODO: Objective 3: compute the shaded result for the intersection point (perhaps requiring shadow rays)
-                
+            	IntersectResult result = null;
+            	double t = Double.POSITIVE_INFINITY;
+            	for( Intersectable surface : surfaceList )
+            	{
+            		IntersectResult temp = new IntersectResult();
+            		surface.intersect( ray, temp );
+            		if ( temp.t < t )
+            		{
+            			t	 	= temp.t;
+            			result 	= temp;
+            		}
+            	}
+            	
+            	int argb;
+            	if( result == null )
+            	{
+            		Color3f c = new Color3f(render.bgcolor);
+                	int r = (int)(255*( c.x ));
+                    int g = (int)(255*( c.y ));
+                    int b = (int)(255*( c.z ));
+                    int a = 255;
+                    argb = (a<<24 | r<<16 | g<<8 | b);    
+            	}
+            	else
+            	{
+            		Color3f c = new Color3f(1,1,1);
+                	int r = (int)(255*( c.x ));
+                    int g = (int)(255*( c.y ));
+                    int b = (int)(255*( c.z ));
+                    int a = 255;
+                    argb = (a<<24 | r<<16 | g<<8 | b); 
+            	}
+                for ( Light light : lights.values() )
+                {
+                	
+                }
             	// Here is an example of how to calculate the pixel value.
 
 
@@ -188,12 +300,6 @@ public class Scene {
         		rayDir.normalize(ray.viewDirection);
         		
         		
-            	Color3f c = new Color3f(render.bgcolor);
-            	int r = (int)(255*( 0.0 + rayDir.x + 1.0 )/2.0);
-                int g = (int)(255*( 0.0 + rayDir.y + 1.0 )/2.0);
-                int b = (int)(255*( 0.0 ));
-                int a = 255;
-                int argb = (a<<24 | r<<16 | g<<8 | b);    
                 
                 // update the render image
                 render.setPixel(j, i, argb);

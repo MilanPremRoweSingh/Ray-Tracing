@@ -39,60 +39,47 @@ public class Sphere extends Intersectable {
     	this.material = material;
     }
     
-private double dx, dy, dz, ex, ey, ez, cx, cy, cz,  a, b, c, discriminant, t, t0, t1 = 0.0;
-    
     @Override
     public void intersect( Ray ray, IntersectResult result ) {
     
-        // TODO: finish this class
+    	double t = Double.POSITIVE_INFINITY;
+    	
+        Vector3d p = new Vector3d( ray.eyePoint );
+        p.sub( center );
         
-        // don't have to dereference each time 
-        dx = ray.viewDirection.x; 
-        dy = ray.viewDirection.y; 
-        dz = ray.viewDirection.z;
+        Vector3d d = new Vector3d( ray.viewDirection );
         
-        ex = ray.eyePoint.x; 
-        ey = ray.eyePoint.y; 
-        ez = ray.eyePoint.z;
+        double dotDD = localDot( d, d );
+        double dotDP = localDot( d, p );
+        double dotPP = localDot( p, p );
         
-        cx = center.x; 
-        cy = center.y; 
-        cz = center.z; 
-        
-        
+        double sqrtTerm = dotDP * dotDP - dotDD * ( dotPP - radius*radius );
                 
-        // check the discriminant  
-        discriminant = (dx*(ex-cx) + dy*(ey-cy) + dz*(ez-cz))*(dx*(ex-cx) + dy*(ey-cy) + dz*(ez-cz)) - (dx*dx + dy*dy + dz*dz)*((ex-cx)*(ex-cx) + (ey-cy)*(ey-cy) + (ez-cz)*(ez-cz) -this.radius*this.radius);
+                       
+        if( sqrtTerm < 0.0 ) return;    
         
-        // there is no intersection then don't bother continuing                 
-        if(discriminant < 0.0) return;    
+        sqrtTerm = Math.sqrt(sqrtTerm);
         
-        discriminant = Math.sqrt(discriminant);
-        // if there are two interesections find the one that hits 
-        if(discriminant > 0 ){
-            t = -1*(dx*(ex-cx) + dy*(ey-cy) + dz*(ez-cz));             
-            t0 = (t - discriminant)/(dx*dx + dy*dy + dz*dz);
-            t1 = (t + discriminant)/(dx*dx + dy*dy + dz*dz);
+        if( sqrtTerm > 0 )
+        {
+            t = -1* dotDP;            
+            double t_minus = (t - sqrtTerm )/( dotDD );
+            double t_plus = (t + sqrtTerm )/( dotDD );
           
-          if(t0 < t1 && t0 > 0) t = t0; 
-          else if (t1 < t0 && t1 >0 ) t = t1;
-          else return;
-            
+            t = ( t_minus > 0 ) ? t_minus : ( t_plus > 0 ) ? t_plus : Double.POSITIVE_INFINITY;
         }
         // if there is only one find the one that hits 
-        else t  =  -1*(dx*(ex-cx) + dy*(ey-cy) + dz*(ez-cz))/(dx*dx + dy*dy + dz*dz);
+        else t  = -1 * dotDP / dotDD;
 
         if(!(t > 0.000001) || result.t < t) return;
         // set the result in 
         result.t = t; 
         result.material = this.material;
         ray.getPoint(t, result.p);
-        result.n.set((result.p.x-cx)/radius, (result.p.y-cy)/radius, (result.p.z-cz)/radius);           
-        result.n.normalize();
-        
-        
-        
-}
+        result.n.set((result.p.x-center.x), (result.p.y-center.y), (result.p.z-center.z));           
+        result.n.normalize();    
+    }
+    
     public static double localDot( Tuple3d a, Tuple3d b )
     {
     	return a.x*b.x + a.y*b.y + a.z*b.z;

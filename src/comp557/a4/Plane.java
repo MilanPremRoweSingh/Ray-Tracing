@@ -26,24 +26,21 @@ public class Plane extends Intersectable {
     	super();
     }
 
-        
-    Vector3d helper = new Vector3d();
     @Override
-    public void intersect( Ray ray, IntersectResult result ) {
+    public void intersect( Ray ray, IntersectResult result ) 
+    {
     
-        // TODO: finish this class   
-        // zero is on the plane therefore we only need to set the point as the vector 
-        helper.set(ray.eyePoint);
-        helper.scale(-1);
+    	Vector3d invEye = new Vector3d( ray.eyePoint );
+    	invEye.scale( -1.0 );
         
+    	n.normalize();
+        double t = invEye.dot( n )/ray.viewDirection.dot( n );
         
-        double t = helper.dot(n)/ray.viewDirection.dot(n);
-        
-        if(!(t > 0.000001) || result.t < t) return;
+        if(!( t > 1e-6 ) || result.t < t) 
+        	return;
         
         result.t =t;
-        result.n.set(n); 
-        //result.p.set(ray.eyePoint.x + result.t * ray.viewDirection.x, ray.eyePoint.y+ result.t * ray.viewDirection.y, ray.eyePoint.z + result.t * ray.viewDirection.z);
+        result.n.set( n ); 
         ray.getPoint(t, result.p);
         
         // if only material one is available
@@ -53,23 +50,25 @@ public class Plane extends Intersectable {
         else if(this.material == null && this.material2!= null) { result.material = this.material2;}
         
         // if we are in the top right or bottom left quadrants 
-        else if( (result.p.x > 0 && result.p.z>0 ) || result.p.x < 0 && result.p.z < 0 ) {
-            if ((((int)result.p.x) % 2 == 0 && ((int)result.p.z) % 2 == 0) || 
-                    (((int)result.p.x) % 2 != 0 && ((int)result.p.z) % 2 != 0)) {
+        else if( ( result.p.x > 0 && result.p.z > 0 ) || result.p.x < 0 && result.p.z < 0 ) 
+        {
+            if ( ( ( (int)result.p.x ) % 2 == 0 && ( (int)result.p.z ) % 2 == 0 ) || ( ( (int)result.p.x ) % 2 != 0 && ( (int)result.p.z ) % 2 != 0) ) 
+            {
                 result.material = this.material;
             }
-            else {
+            else 
+            {
                 result.material = this.material2;
             }            
         }  
-        
-        // if we are in the top left or bottom right quadrants 
-        else {
-            if ((((int)result.p.x) % 2 == 0 && ((int)result.p.z) % 2 == 0) || 
-                    (((int)result.p.x) % 2 != 0 && ((int)result.p.z) % 2 != 0)) {
+        else 
+        {
+            if ((((int)result.p.x) % 2 == 0 && ((int)result.p.z) % 2 == 0) || (((int)result.p.x) % 2 != 0 && ((int)result.p.z) % 2 != 0)) 
+            {
                 result.material = this.material2;
             }
-            else {
+            else 
+            {
                 result.material = this.material;
             }   
         }

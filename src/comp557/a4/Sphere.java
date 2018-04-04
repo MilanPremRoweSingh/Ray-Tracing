@@ -39,56 +39,60 @@ public class Sphere extends Intersectable {
     	this.material = material;
     }
     
-    boolean first = true; //TEST
+private double dx, dy, dz, ex, ey, ez, cx, cy, cz,  a, b, c, discriminant, t, t0, t1 = 0.0;
     
     @Override
     public void intersect( Ray ray, IntersectResult result ) {
-    	
-    	if ( first )
-    	{
-    		first = !first;
-        	center.x += 4;
-        	center.y -= 4;
-    	}
-    	
-    	if( ray == null )
-    		return;
-    	
-    	if( result == null )
-    		result = new IntersectResult();
-
-    	//Intesects if point p exists such that:
-    	//	1) point p is on ray: p = eye + t*rayDir for some t
-    	//	2) point p is on sphere: ||p||^2 - r = 0
-    	//  Solve for t in dot( ( eye + t*rayDir ), ( eye + t*rayDir ) ) = r -> Quadratic Equation
-    	
-    	
-    	//TEST SPhere at origin
-    	Vector3d	d = new Vector3d( ray.viewDirection );
-    	Point3d		p = new Point3d( ray.eyePoint );
-    	p.sub( center );
-    	
-    	
-    	double pMag = localDot( p, p );	
-    	double dMag = localDot( d, d );	
-    	double dp 	= localDot( d, p );	
-    	
-    	double sqrtTerm = dp*dp - dMag*( pMag -  radius );
-    	if( sqrtTerm >= 0 )
-    	{
-    		double t_plus 	= ( -dp + Math.sqrt( sqrtTerm ) ) / dMag; 
-    		double t_minus 	= ( -dp - Math.sqrt( sqrtTerm ) ) / dMag; 
-    		
-    		double t = ( t_minus > thresholdErr ) ? t_minus : ( t_plus > thresholdErr ) ? t_plus : Double.POSITIVE_INFINITY;
-    		result.t = t;
-    		result.n = new Vector3d( p.x + d.x*t, p.y + d.y*t, p.z + d.z*t );
-    		result.n.normalize();
-    		result.p = new Point3d( p.x + d.x*t, p.y + d.y*t, p.z + d.z*t ); 
-    		result.material = material;
-    	}
-    	
-    }
     
+        // TODO: finish this class
+        
+        // don't have to dereference each time 
+        dx = ray.viewDirection.x; 
+        dy = ray.viewDirection.y; 
+        dz = ray.viewDirection.z;
+        
+        ex = ray.eyePoint.x; 
+        ey = ray.eyePoint.y; 
+        ez = ray.eyePoint.z;
+        
+        cx = center.x; 
+        cy = center.y; 
+        cz = center.z; 
+        
+        
+                
+        // check the discriminant  
+        discriminant = (dx*(ex-cx) + dy*(ey-cy) + dz*(ez-cz))*(dx*(ex-cx) + dy*(ey-cy) + dz*(ez-cz)) - (dx*dx + dy*dy + dz*dz)*((ex-cx)*(ex-cx) + (ey-cy)*(ey-cy) + (ez-cz)*(ez-cz) -this.radius*this.radius);
+        
+        // there is no intersection then don't bother continuing                 
+        if(discriminant < 0.0) return;    
+        
+        discriminant = Math.sqrt(discriminant);
+        // if there are two interesections find the one that hits 
+        if(discriminant > 0 ){
+            t = -1*(dx*(ex-cx) + dy*(ey-cy) + dz*(ez-cz));             
+            t0 = (t - discriminant)/(dx*dx + dy*dy + dz*dz);
+            t1 = (t + discriminant)/(dx*dx + dy*dy + dz*dz);
+          
+          if(t0 < t1 && t0 > 0) t = t0; 
+          else if (t1 < t0 && t1 >0 ) t = t1;
+          else return;
+            
+        }
+        // if there is only one find the one that hits 
+        else t  =  -1*(dx*(ex-cx) + dy*(ey-cy) + dz*(ez-cz))/(dx*dx + dy*dy + dz*dz);
+
+        if(!(t > 0.000001) || result.t < t) return;
+        // set the result in 
+        result.t = t; 
+        result.material = this.material;
+        ray.getPoint(t, result.p);
+        result.n.set((result.p.x-cx)/radius, (result.p.y-cy)/radius, (result.p.z-cz)/radius);           
+        result.n.normalize();
+        
+        
+        
+}
     public static double localDot( Tuple3d a, Tuple3d b )
     {
     	return a.x*b.x + a.y*b.y + a.z*b.z;

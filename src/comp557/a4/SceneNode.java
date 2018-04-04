@@ -66,7 +66,9 @@ public class SceneNode extends Intersectable {
             s.intersect( tmpRay, tmpResult );
         }
         if ( tmpResult.t > 1e-9 && tmpResult.t < result.t ) {
-        	M.transform(tmpResult.n);
+        	Minv.transpose();
+        	Minv.transform( tmpResult.n );
+        	Minv.transpose();
         	M.transform(tmpResult.p);
         	result.n.set(tmpResult.n);
         	result.p.set(tmpResult.p); 

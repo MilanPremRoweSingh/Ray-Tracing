@@ -92,7 +92,6 @@ public class Scene {
         		double lightingG = 0.0;
         		double lightingB = 0.0;
         		
-        		
         		if( result != null )
         		{
 	        		for( Light light : lights.values() )
@@ -144,9 +143,10 @@ public class Scene {
 	        				half.normalize();
 	        				
 	        				
-	        				
-	        				double diffuseIntensity = Math.max( 0,Sphere.localDot( result.n, l ) ); 
-	        				double specularIntensity = Math.pow( Math.max( 0,Sphere.localDot( result.n, half ) ), result.material.shinyness ); 
+	        				Vector3d n = new Vector3d();
+	        				n.normalize( result.n);
+	        				double diffuseIntensity = Math.max( 0,Sphere.localDot( n, l ) ); 
+	        				double specularIntensity = Math.pow( Math.max( 0,Sphere.localDot( n, half ) ), result.material.shinyness ); 
 	        				//double intensity = localDot( result.n, );
 	                		Color4f diffuseColour 	= result.material.diffuse;//new Color3f( 1,1,1 );
 	                		Color4f specularColour 	= result.material.specular;//new Color3f( 1,1,1 );
@@ -203,7 +203,6 @@ public class Scene {
 		Point3d e = cam.from;
 		
 		Vector3d w 	= new Vector3d( e.x - cam.to.x, e.y - cam.to.y, e.z - cam.to.z ); //w points away from lookat point at eye point
-		double d 	= w.length();
 		w.normalize(); //Normalize as it is a frame axis
 		
 		Vector3d v = new Vector3d( cam.up );
@@ -215,8 +214,9 @@ public class Scene {
 		
 		double fovy = Math.toRadians( cam.fovy ); 
 		
+		double d 	= e.distance( cam.to );
 		double tanTerm 			= Math.tan( fovy / 2.0 );
-		double viewPlaneHeight 	= d / ( 2 * tanTerm );
+		double viewPlaneHeight 	= d / ( 3 * tanTerm );
 		double viewPlaneWidth 	= viewPlaneHeight * aspectRatio;
 		
 		double scalar_u = ( ( (float)j / (float)imgWidth - 0.5f ) * viewPlaneWidth ); //TODO offset

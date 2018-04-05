@@ -50,6 +50,9 @@ public class Render extends WindowAdapter {
     /** The background color */
     public Color3f bgcolor;
     
+    /** Whether or not we perform supersampling */
+    public boolean jitter;
+    
     /** Buffered image of the render, updated as it progresses */    
     public BufferedImage image;
     
@@ -71,6 +74,7 @@ public class Render extends WindowAdapter {
     	this.bgcolor = new Color3f( 0, 0, 0 );
     	this.panel = null;
     	this.samples = 1;
+    	this.jitter = false;//Default supersampling to false;
     }
     
     /**

@@ -5,6 +5,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Map.Entry;
 import java.util.Vector;
 
@@ -50,130 +51,41 @@ public class Scene {
         
         for ( int i = 0; i < h && !render.isDone(); i++ ) {
             for ( int j = 0; j < w && !render.isDone(); j++ ) {
-            	
-                // TODO: Objective 1: generate a ray (use the generateRay method)
-            	Ray ray = new Ray();
-            	generateRay(i, j, new double[] { 0.0, 0.0 }, cam, ray);
-                // TODO: Objective 2: test for intersection with scene surfaces
-            	
-            	Color3f c = new Color3f(render.bgcolor);
-            	int r = (int)(255*c.x);
-                int g = (int)(255*c.y);
-                int b = (int)(255*c.z);
-                int a = 255;
-                int argb = (a<<24 | r<<16 | g<<8 | b);   
-                
-                IntersectResult result = null;
-                double t = Double.POSITIVE_INFINITY;
-            	for( Intersectable curr : surfaceList )
+            	Color3f c;
+            	if( render.jitter )
             	{
-            		IntersectResult temp = new IntersectResult();
-            		curr.intersect( ray, temp );
-            		
-            		if ( temp.t < t ) 
+            		int samplesPerDim = (int) Math.ceil( Math.sqrt( render.samples ) );
+            		Random rand = new Random();
+            		c = new Color3f();
+            		for( int y = 0; y < samplesPerDim; y++ )
             		{
-            			t = temp.t;
-            			result = temp;
+            			for( int x = 0; x < samplesPerDim; x++ )
+            			{
+            				double rx = -0.5 +  ( x + rand.nextDouble() )/samplesPerDim;
+            				double ry = -0.5 +  ( y + rand.nextDouble() )/samplesPerDim;
+
+        	            	Ray ray = new Ray();
+        	            	generateRay(i, j, new double[] { rx, ry }, cam, ray);
+        	                c.add( getPixelColour( render, ray ) );
+            			}
             		}
+            		c.scale( 1.0f/(float)(samplesPerDim*samplesPerDim) );
             	}
-            	
-            	
-            	
-                // TODO: Objective 3: compute the shaded result for the intersection point (perhaps requiring shadow rays)
-                
-            	// Here is an example of how to calculate the pixel value.
-
-
-        		Vector3d rayDir = new Vector3d();
-        		rayDir.normalize(ray.viewDirection);
+            	else
+            	{
+	            	Ray ray = new Ray();
+	            	generateRay(i, j, new double[] { 0.0, 0.0 }, cam, ray);
+	            	
+	                c = getPixelColour( render, ray );
+            	}
         		
-        		
-        		double lightingR = 0.0;
-        		double lightingG = 0.0;
-        		double lightingB = 0.0;
-        		
-        		if( result != null )
-        		{
-	        		for( Light light : lights.values() )
-	        		{
-	        			Vector3d shadowRayDir = new Vector3d();
-	        			shadowRayDir.sub( result.p );
-	        			shadowRayDir.add( light.from );
-	        			
-	        			Point3d origin = new Point3d();
-	        			origin.add(shadowRayDir);
-	        			origin.scale( 1e-4 );
-	        			origin.add( result.p );
-	        			Ray shadowRay = new Ray( origin, shadowRayDir );
-	        			
-	        			t = Double.POSITIVE_INFINITY;
-	        			for( Intersectable curr : surfaceList )
-	                	{
-	                		IntersectResult temp = new IntersectResult();
-	                		curr.intersect( shadowRay, temp );
-	                		
-	                		if ( temp.t < t ) 
-	                		{
-	                			t = temp.t;
-	                		}
-	                	}
-	        			
-	        			boolean shaded = false;
-	        			if( t < Double.POSITIVE_INFINITY ) //TEST without shading
-	        			{
-	        				Vector3d originToIntersectable 	= new Vector3d();
-	        				originToIntersectable.add( shadowRayDir );
-	        				originToIntersectable.scale( t );
-	        				
-	        				shaded = ( originToIntersectable.lengthSquared() < shadowRayDir.lengthSquared() ); //Use lengthSquared as its cheaper
-	        			}
-	        			
-	        			if( !shaded )
-	        			{
-	        				Vector3d v = new Vector3d( ray.viewDirection );
-	        				v.scale( -1.0 );
-	        				v.normalize();
-	        				
-	        				Vector3d l = new Vector3d( shadowRayDir );
-	        				l.normalize();
-	        				
-	        				Vector3d half = new Vector3d();
-	        				half.add( l );
-	        				half.add( v );
-	        				half.normalize();
-	        				
-	        				
-	        				Vector3d n = new Vector3d();
-	        				n.normalize( result.n);
-	        				double diffuseIntensity = Math.max( 0,Sphere.localDot( n, l ) ); 
-	        				double specularIntensity = Math.pow( Math.max( 0,Sphere.localDot( n, half ) ), result.material.shinyness ); 
-	        				//double intensity = localDot( result.n, );
-	                		Color4f diffuseColour 	= result.material.diffuse;//new Color3f( 1,1,1 );
-	                		Color4f specularColour 	= result.material.specular;//new Color3f( 1,1,1 );
-	                    	lightingR += light.power * light.color.x * ( diffuseColour.x*diffuseIntensity + specularColour.x*specularIntensity );
-	                        lightingG += light.power * light.color.y * ( diffuseColour.y*diffuseIntensity + specularColour.y*specularIntensity );
-	                        lightingB += light.power * light.color.z * ( diffuseColour.z*diffuseIntensity + specularColour.z*specularIntensity );
-	        			}
-	        			
-                    	lightingR += light.power * light.color.x * ( result.material.diffuse.x * ambient.x);
-                        lightingG += light.power * light.color.y * ( result.material.diffuse.y * ambient.y);
-                        lightingB += light.power * light.color.z * ( result.material.diffuse.z * ambient.z);
-	        		}
-        		}
-        		else
-        		{
-        			lightingR = render.bgcolor.x;
-        			lightingG = render.bgcolor.y;
-        			lightingB = render.bgcolor.z;
-        		}
-        		
-            	r = (int)(255*( Math.min( lightingR, 1.0 ) ) );
-                g = (int)(255*( Math.min( lightingG, 1.0 ) ) );
-                b = (int)(255*( Math.min( lightingB, 1.0 ) ) );
+            	int r = (int)( 255*( c.x ) );
+                int g = (int)( 255*( c.y ) );
+                int b = (int)( 255*( c.z ) );
                 
                 // update the render image
-                a = 255;
-                argb = (a<<24 | r<<16 | g<<8 | b);   
+                int a = 255;
+                int argb = (a<<24 | r<<16 | g<<8 | b);   
                 render.setPixel(j, i, argb);
             }
         }
@@ -183,6 +95,122 @@ public class Scene {
         
         // wait for render viewer to close
         render.waitDone();        
+    }
+    
+    public Color3f getPixelColour( Render render, Ray ray )
+    {
+    	IntersectResult result = null;
+        double t = Double.POSITIVE_INFINITY;
+    	for( Intersectable curr : surfaceList )
+    	{
+    		IntersectResult temp = new IntersectResult();
+    		curr.intersect( ray, temp );
+    		
+    		if ( temp.t < t ) 
+    		{
+    			t = temp.t;
+    			result = temp;
+    		}
+    	}
+        // TODO: Objective 3: compute the shaded result for the intersection point (perhaps requiring shadow rays)
+        
+    	// Here is an example of how to calculate the pixel value.
+
+
+		Vector3d rayDir = new Vector3d();
+		rayDir.normalize(ray.viewDirection);
+		
+		
+		double lightingR = 0.0;
+		double lightingG = 0.0;
+		double lightingB = 0.0;
+		
+		if( result != null )
+		{
+    		for( Light light : lights.values() )
+    		{
+    			Vector3d shadowRayDir = new Vector3d();
+    			shadowRayDir.sub( result.p );
+    			shadowRayDir.add( light.from );
+    			
+    			Point3d origin = new Point3d();
+    			origin.add(shadowRayDir);
+    			origin.scale( 1e-4 );
+    			origin.add( result.p );
+    			Ray shadowRay = new Ray( origin, shadowRayDir );
+    			
+
+            	Color3f c = new Color3f(render.bgcolor);
+            	int r = (int)(255*c.x);
+                int g = (int)(255*c.y);
+                int b = (int)(255*c.z);
+                int a = 255;
+                int argb = (a<<24 | r<<16 | g<<8 | b);   		t = Double.POSITIVE_INFINITY;
+    			for( Intersectable curr : surfaceList )
+            	{
+            		IntersectResult temp = new IntersectResult();
+            		curr.intersect( shadowRay, temp );
+            		
+            		if ( temp.t < t ) 
+            		{
+            			t = temp.t;
+            		}
+            	}
+    			
+    			boolean shaded = false;
+    			if( t < Double.POSITIVE_INFINITY ) //TEST without shading
+    			{
+    				Vector3d originToIntersectable 	= new Vector3d();
+    				originToIntersectable.add( shadowRayDir );
+    				originToIntersectable.scale( t );
+    				
+    				shaded = ( originToIntersectable.lengthSquared() < shadowRayDir.lengthSquared() ); //Use lengthSquared as its cheaper
+    			}
+    			
+    			if( !shaded )
+    			{
+    				Vector3d v = new Vector3d( ray.viewDirection );
+    				v.scale( -1.0 );
+    				v.normalize();
+    				
+    				Vector3d l = new Vector3d( shadowRayDir );
+    				l.normalize();
+    				
+    				Vector3d half = new Vector3d();
+    				half.add( l );
+    				half.add( v );
+    				half.normalize();
+    				
+    				
+    				Vector3d n = new Vector3d();
+    				n.normalize( result.n);
+    				double diffuseIntensity = Math.max( 0,Sphere.localDot( n, l ) ); 
+    				double specularIntensity = Math.pow( Math.max( 0,Sphere.localDot( n, half ) ), result.material.shinyness ); 
+    				//double intensity = localDot( result.n, );
+            		Color4f diffuseColour 	= result.material.diffuse;//new Color3f( 1,1,1 );
+            		Color4f specularColour 	= result.material.specular;//new Color3f( 1,1,1 );
+                	lightingR += light.power * light.color.x * ( diffuseColour.x*diffuseIntensity + specularColour.x*specularIntensity );
+                    lightingG += light.power * light.color.y * ( diffuseColour.y*diffuseIntensity + specularColour.y*specularIntensity );
+                    lightingB += light.power * light.color.z * ( diffuseColour.z*diffuseIntensity + specularColour.z*specularIntensity );
+    			}
+    			
+            	lightingR += light.power * light.color.x * ( result.material.diffuse.x * ambient.x);
+                lightingG += light.power * light.color.y * ( result.material.diffuse.y * ambient.y);
+                lightingB += light.power * light.color.z * ( result.material.diffuse.z * ambient.z);
+    		}
+		}
+		else
+		{
+			lightingR = render.bgcolor.x;
+			lightingG = render.bgcolor.y;
+			lightingB = render.bgcolor.z;
+		}
+		
+		lightingR = Math.max( 0.0, Math.min( lightingR, 1.0 ) );
+		lightingG = Math.max( 0.0, Math.min( lightingG, 1.0 ) );
+		lightingB = Math.max( 0.0, Math.min( lightingB, 1.0 ) );
+		
+		return new Color3f( new float[]{ (float)lightingR, (float)lightingG, (float)lightingB } );
     }
     
     /**
@@ -219,8 +247,8 @@ public class Scene {
 		double viewPlaneHeight 	= d / ( 3 * tanTerm );
 		double viewPlaneWidth 	= viewPlaneHeight * aspectRatio;
 		
-		double scalar_u = ( ( (float)j / (float)imgWidth - 0.5f ) * viewPlaneWidth ); //TODO offset
-		double scalar_v = ( ( (float)( imgHeight - i ) / (float)imgHeight - 0.5f ) * viewPlaneHeight ); //TODO offset
+		double scalar_u = ( ( (float)(j + offset[1]) / (float)imgWidth - 0.5f ) * viewPlaneWidth ); //TODO offset
+		double scalar_v = ( ( (float)( imgHeight - i + offset[0] ) / (float)imgHeight - 0.5f ) * viewPlaneHeight ); //TODO offset
 		
 		Vector3d rayDir = new Vector3d();
 		Vector3d temp	= new Vector3d();

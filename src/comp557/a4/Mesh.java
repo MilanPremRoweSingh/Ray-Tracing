@@ -36,7 +36,6 @@ public class Mesh extends Intersectable {
 		// TODO: Objective 7: ray triangle intersection for meshes
 		List<int[]> faces = soup.faceList;
 		List<Vertex> verts = soup.vertexList;
-		Vector3d[] faceNormals = new Vector3d[ faces.size() ];
 		
 		double t = Double.POSITIVE_INFINITY;
 		for( int faceIdx = 0; faceIdx < faces.size(); faceIdx++ )

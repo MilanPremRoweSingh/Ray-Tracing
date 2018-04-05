@@ -321,6 +321,12 @@ public class Parser {
 				render.camera = Parser.createCamera(n);
     		}
     	}	
+    	Node jitterAttr = dataNode.getAttributes().getNamedItem( "jitter" );
+    	if ( jitterAttr != null )
+    	{
+        	Scanner s = new Scanner( jitterAttr.getNodeValue());
+        	render.jitter = s.nextBoolean();
+    	}
 		return render;
 	}
 	

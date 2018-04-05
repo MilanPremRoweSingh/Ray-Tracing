@@ -75,6 +75,7 @@ public class Sphere extends Intersectable {
         // set the result in 
         result.t = t; 
         result.material = this.material;
+        result.brdf = brdf;
         ray.getPoint(t, result.p);
         result.n.set((result.p.x-center.x), (result.p.y-center.y), (result.p.z-center.z));           
         result.n.normalize();    

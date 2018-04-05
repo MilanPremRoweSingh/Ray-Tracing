@@ -47,16 +47,16 @@ public class Scene {
      * renders the scene
      */
     public void render(boolean showPanel) {
-
+    	
         Camera cam = render.camera; 
         int w = cam.imageSize.width;
         int h = cam.imageSize.height;
         
         render.init(w, h, showPanel);
         
-        if( true )
+        if( false )
         {
-	        ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(16);
+	        ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(8);
 	        
 	        for ( int i = 0; i < h && !render.isDone(); i++ ) {
 	            for ( int j = 0; j < w && !render.isDone(); j++ ) {
@@ -111,7 +111,7 @@ public class Scene {
     				double ry = -0.5 +  ( y + rand.nextDouble() )/samplesPerDim;
 
 	            	Ray ray = new Ray();
-
+	            	
 	            	generateRay(i, j, new double[] { rx, ry }, cam, ray);
 	                c.add( getPixelColour( render, ray ) );
     			}
@@ -205,34 +205,55 @@ public class Scene {
     			
     			if( !shadowed )
     			{
-    				Vector3d v = new Vector3d( ray.viewDirection );
-    				v.scale( -1.0 );
-    				v.normalize();
-    				
-    				Vector3d l = new Vector3d( shadowRayDir );
-    				l.normalize();
-    				
-    				Vector3d half = new Vector3d();
-    				half.add( l );
-    				half.add( v );
-    				half.normalize();
-    				
-    				
-    				Vector3d n = new Vector3d();
-    				n.normalize( result.n);
-    				double diffuseIntensity = Math.max( 0,Sphere.localDot( n, l ) ); 
-    				double specularIntensity = Math.pow( Math.max( 0,Sphere.localDot( n, half ) ), result.material.shinyness ); 
-    				//double intensity = localDot( result.n, );
-            		Color4f diffuseColour 	= result.material.diffuse;//new Color3f( 1,1,1 );
-            		Color4f specularColour 	= result.material.specular;//new Color3f( 1,1,1 );
-                	lightingR += light.power * light.color.x * ( diffuseColour.x*diffuseIntensity + specularColour.x*specularIntensity );
-                    lightingG += light.power * light.color.y * ( diffuseColour.y*diffuseIntensity + specularColour.y*specularIntensity );
-                    lightingB += light.power * light.color.z * ( diffuseColour.z*diffuseIntensity + specularColour.z*specularIntensity );
+    				if ( result.brdf == null )
+    				{
+	    				Vector3d v = new Vector3d( ray.viewDirection );
+	    				v.scale( -1.0 );
+	    				v.normalize();
+	    				
+	    				Vector3d l = new Vector3d( shadowRayDir );
+	    				l.normalize();
+	    				
+	    				Vector3d half = new Vector3d();
+	    				half.add( l );
+	    				half.add( v );
+	    				half.normalize();
+	    				
+	    				
+	    				Vector3d n = new Vector3d();
+	    				n.normalize( result.n);
+	    				double diffuseIntensity = Math.max( 0,Sphere.localDot( n, l ) ); 
+	    				double specularIntensity = Math.pow( Math.max( 0,Sphere.localDot( n, half ) ), result.material.shinyness ); 
+	    				//double intensity = localDot( result.n, );
+	            		Color4f diffuseColour 	= result.material.diffuse;//new Color3f( 1,1,1 );
+	            		Color4f specularColour 	= result.material.specular;//new Color3f( 1,1,1 );
+	                	lightingR += light.power * light.color.x * ( diffuseColour.x*diffuseIntensity + specularColour.x*specularIntensity );
+	                    lightingG += light.power * light.color.y * ( diffuseColour.y*diffuseIntensity + specularColour.y*specularIntensity );
+	                    lightingB += light.power * light.color.z * ( diffuseColour.z*diffuseIntensity + specularColour.z*specularIntensity );
+    				}
+    				else
+    				{
+    					Vector3d v = new Vector3d( ray.viewDirection );
+	    				v.scale( -1.0 );
+	    				v.normalize();
+	    				
+	    				Vector3d l = new Vector3d( shadowRayDir );
+	    				l.normalize();
+	    				
+    					Color3f c = result.brdf.lookupVal( l, v, result.n );
+    					//c.scale((float) l.dot( v ) );
+    					lightingR += light.power * light.color.x * c.x;
+	                    lightingG += light.power * light.color.y * c.y;
+	                    lightingB += light.power * light.color.z * c.z;
+    				}
     			}
     			
-            	lightingR += light.power * light.color.x * ( result.material.diffuse.x * ambient.x);
-                lightingG += light.power * light.color.y * ( result.material.diffuse.y * ambient.y);
-                lightingB += light.power * light.color.z * ( result.material.diffuse.z * ambient.z);
+    			if( result.brdf == null )
+    			{
+	            	lightingR += light.power * light.color.x * ( result.material.diffuse.x * ambient.x);
+	                lightingG += light.power * light.color.y * ( result.material.diffuse.y * ambient.y);
+	                lightingB += light.power * light.color.z * ( result.material.diffuse.z * ambient.z);
+    			}
     		}
 		}
 		else

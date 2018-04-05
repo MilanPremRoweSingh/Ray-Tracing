@@ -16,6 +16,8 @@ public class IntersectResult {
 	
 	/** The material of the intersection */
 	public Material material = null;
+	
+	public BRDF brdf = null;
 		
 	/** Parameter on the ray giving the position of the intersection */
 	public double t = Double.POSITIVE_INFINITY; 

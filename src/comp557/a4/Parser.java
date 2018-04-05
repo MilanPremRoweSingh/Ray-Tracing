@@ -359,6 +359,13 @@ public class Parser {
 			sphere.radius = Double.parseDouble( radiusAttr.getNodeValue() );
 		}
 		sphere.material = parseMaterial(dataNode, "material");	
+		
+		Node brdfAttr = dataNode.getAttributes().getNamedItem("brdf");
+		if( brdfAttr != null )
+		{
+			sphere.brdf = new BRDF( brdfAttr.getNodeValue() );
+		}
+		
     	return sphere;
 	}
 

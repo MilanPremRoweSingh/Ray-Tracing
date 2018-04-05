@@ -33,7 +33,6 @@ public class Mesh extends Intersectable {
 	public void intersect(Ray ray, IntersectResult result) 
 	{
 		System.out.println("");
-		// TODO: Objective 7: ray triangle intersection for meshes
 		List<int[]> faces = soup.faceList;
 		List<Vertex> verts = soup.vertexList;
 		

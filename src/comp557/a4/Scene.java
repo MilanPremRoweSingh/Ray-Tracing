@@ -7,6 +7,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Map.Entry;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.Vector;
 
 import javax.vecmath.Color3f;
@@ -49,46 +54,38 @@ public class Scene {
         
         render.init(w, h, showPanel);
         
-        for ( int i = 0; i < h && !render.isDone(); i++ ) {
-            for ( int j = 0; j < w && !render.isDone(); j++ ) {
-            	Color3f c;
-            	if( render.jitter )
-            	{
-            		int samplesPerDim = (int) Math.ceil( Math.sqrt( render.samples ) );
-            		Random rand = new Random();
-            		c = new Color3f();
-            		for( int y = 0; y < samplesPerDim; y++ )
-            		{
-            			for( int x = 0; x < samplesPerDim; x++ )
-            			{
-            				double rx = -0.5 +  ( x + rand.nextDouble() )/samplesPerDim;
-            				double ry = -0.5 +  ( y + rand.nextDouble() )/samplesPerDim;
-
-        	            	Ray ray = new Ray();
-        	            	generateRay(i, j, new double[] { rx, ry }, cam, ray);
-        	                c.add( getPixelColour( render, ray ) );
-            			}
-            		}
-            		c.scale( 1.0f/(float)(samplesPerDim*samplesPerDim) );
-            	}
-            	else
-            	{
-	            	Ray ray = new Ray();
-	            	generateRay(i, j, new double[] { 0.0, 0.0 }, cam, ray);
-	            	
-	                c = getPixelColour( render, ray );
-            	}
-        		
-            	int r = (int)( 255*( c.x ) );
-                int g = (int)( 255*( c.y ) );
-                int b = (int)( 255*( c.z ) );
-                
-                // update the render image
-                int a = 255;
-                int argb = (a<<24 | r<<16 | g<<8 | b);   
-                render.setPixel(j, i, argb);
-            }
+        if( true )
+        {
+	        ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(16);
+	        
+	        for ( int i = 0; i < h && !render.isDone(); i++ ) {
+	            for ( int j = 0; j < w && !render.isDone(); j++ ) {
+	            	final int idxX = j;
+	            	final int idxY = i;
+	            	executor.submit( ()-> { drawPixel( idxY, idxX,render); } );
+	            }
+	        }
+	        
+	        try 
+	        {
+	        	while( executor.awaitTermination( 1, TimeUnit.SECONDS ) );
+	        }
+	        catch( InterruptedException e )
+	        {
+	        	e.printStackTrace();
+	        }
         }
+        else
+        {
+	        for ( int i = 0; i < h && !render.isDone(); i++ ) {
+	            for ( int j = 0; j < w && !render.isDone(); j++ ) {
+	            	final int idxX = j;
+	            	final int idxY = i;
+	            	drawPixel( idxY, idxX,render);
+	            }
+	        }
+        }
+        
         
         // save the final render image
         render.save();
@@ -97,10 +94,56 @@ public class Scene {
         render.waitDone();        
     }
     
+    public void drawPixel( int i, int j, Render render )
+    {
+    	Camera cam = render.camera;
+    	Color3f c;
+    	if( render.jitter )
+    	{
+    		int samplesPerDim = (int) Math.ceil( Math.sqrt( render.samples ) );
+    		Random rand = new Random();
+    		c = new Color3f();
+    		for( int y = 0; y < samplesPerDim; y++ )
+    		{
+    			for( int x = 0; x < samplesPerDim; x++ )
+    			{
+    				double rx = -0.5 +  ( x + rand.nextDouble() )/samplesPerDim;
+    				double ry = -0.5 +  ( y + rand.nextDouble() )/samplesPerDim;
+
+	            	Ray ray = new Ray();
+
+	            	generateRay(i, j, new double[] { rx, ry }, cam, ray);
+	                c.add( getPixelColour( render, ray ) );
+    			}
+    		}
+    		c.scale( 1.0f/(float)(samplesPerDim*samplesPerDim) );
+    	}
+    	else
+    	{
+        	Ray ray = new Ray();
+        	generateRay(i, j, new double[] { 0.0, 0.0 }, cam, ray);
+
+        	
+            c = getPixelColour( render, ray );
+    	}
+		
+    	int r = (int)( 255*( c.x ) );
+        int g = (int)( 255*( c.y ) );
+        int b = (int)( 255*( c.z ) );
+    	
+        // update the render image
+        int a = 255;
+        int argb = (a<<24 | r<<16 | g<<8 | b);   
+        render.setPixel(j, i, argb);
+    	
+    }
+    
     public Color3f getPixelColour( Render render, Ray ray )
     {
+
     	IntersectResult result = null;
         double t = Double.POSITIVE_INFINITY;
+
     	for( Intersectable curr : surfaceList )
     	{
     		IntersectResult temp = new IntersectResult();
@@ -112,8 +155,6 @@ public class Scene {
     			result = temp;
     		}
     	}
-        // TODO: Objective 3: compute the shaded result for the intersection point (perhaps requiring shadow rays)
-        
     	// Here is an example of how to calculate the pixel value.
 
 
@@ -137,15 +178,11 @@ public class Scene {
     			origin.add(shadowRayDir);
     			origin.scale( 1e-4 );
     			origin.add( result.p );
-    			Ray shadowRay = new Ray( origin, shadowRayDir );
-    			
+    			Ray shadowRay = new Ray( origin, shadowRayDir );                
 
-            	Color3f c = new Color3f(render.bgcolor);
-            	int r = (int)(255*c.x);
-                int g = (int)(255*c.y);
-                int b = (int)(255*c.z);
-                int a = 255;
-                int argb = (a<<24 | r<<16 | g<<8 | b);   		t = Double.POSITIVE_INFINITY;
+    			boolean shadowed = false;
+    			
+                t = Double.POSITIVE_INFINITY;
     			for( Intersectable curr : surfaceList )
             	{
             		IntersectResult temp = new IntersectResult();
@@ -157,17 +194,16 @@ public class Scene {
             		}
             	}
     			
-    			boolean shaded = false;
-    			if( t < Double.POSITIVE_INFINITY ) //TEST without shading
+    			if( t < Double.POSITIVE_INFINITY ) 
     			{
     				Vector3d originToIntersectable 	= new Vector3d();
     				originToIntersectable.add( shadowRayDir );
     				originToIntersectable.scale( t );
     				
-    				shaded = ( originToIntersectable.lengthSquared() < shadowRayDir.lengthSquared() ); //Use lengthSquared as its cheaper
+    				shadowed = ( originToIntersectable.lengthSquared() < shadowRayDir.lengthSquared() ); //Use lengthSquared as its cheaper
     			}
     			
-    			if( !shaded )
+    			if( !shadowed )
     			{
     				Vector3d v = new Vector3d( ray.viewDirection );
     				v.scale( -1.0 );
@@ -209,8 +245,9 @@ public class Scene {
 		lightingR = Math.max( 0.0, Math.min( lightingR, 1.0 ) );
 		lightingG = Math.max( 0.0, Math.min( lightingG, 1.0 ) );
 		lightingB = Math.max( 0.0, Math.min( lightingB, 1.0 ) );
-		
+
 		return new Color3f( new float[]{ (float)lightingR, (float)lightingG, (float)lightingB } );
+		
     }
     
     /**
@@ -247,8 +284,8 @@ public class Scene {
 		double viewPlaneHeight 	= d / ( 3 * tanTerm );
 		double viewPlaneWidth 	= viewPlaneHeight * aspectRatio;
 		
-		double scalar_u = ( ( (float)(j + offset[1]) / (float)imgWidth - 0.5f ) * viewPlaneWidth ); //TODO offset
-		double scalar_v = ( ( (float)( imgHeight - i + offset[0] ) / (float)imgHeight - 0.5f ) * viewPlaneHeight ); //TODO offset
+		double scalar_u = ( ( (float)(j + offset[1] + 0.5f) / (float)imgWidth - 0.5f ) * viewPlaneWidth ); 
+		double scalar_v = ( ( (float)( imgHeight - i + offset[0] + 0.5f ) / (float)imgHeight - 0.5f ) * viewPlaneHeight ); 
 		
 		Vector3d rayDir = new Vector3d();
 		Vector3d temp	= new Vector3d();
@@ -267,95 +304,5 @@ public class Scene {
 		
 		ray.set( e, rayDir );
 	}
-	
-	public void testRayGeneration( boolean showPanel ) //Call in render to draw rayDir x,y as image r,b
-	{
-		Camera cam = render.camera; 
-        int w = cam.imageSize.width;
-        int h = cam.imageSize.height;
-        
-        render.init(w, h, showPanel);
-        
-        for ( int i = 0; i < h && !render.isDone(); i++ ) {
-            for ( int j = 0; j < w && !render.isDone(); j++ ) {
-            	
-                // TODO: Objective 1: generate a ray (use the generateRay method)
-            	Ray ray = new Ray();
-            	generateRay(i, j, new double[] { 0.0, 0.0 }, cam, ray);
-                // TODO: Objective 2: test for intersection with scene surfaces
-            	
-                // TODO: Objective 3: compute the shaded result for the intersection point (perhaps requiring shadow rays)
-            	IntersectResult result = null;
-            	double t = Double.POSITIVE_INFINITY;
-            	for( Intersectable surface : surfaceList )
-            	{
-            		IntersectResult temp = new IntersectResult();
-            		surface.intersect( ray, temp );
-            		if ( temp.t < t )
-            		{
-            			t	 	= temp.t;
-            			result 	= temp;
-            		}
-            	}
-            	
-            	int argb;
-            	if( result == null )
-            	{
-            		Color3f c = new Color3f(render.bgcolor);
-                	int r = (int)(255*( c.x ));
-                    int g = (int)(255*( c.y ));
-                    int b = (int)(255*( c.z ));
-                    int a = 255;
-                    argb = (a<<24 | r<<16 | g<<8 | b);    
-            	}
-            	else
-            	{
-            		Color3f c = new Color3f(1,1,1);
-                	int r = (int)(255*( c.x ));
-                    int g = (int)(255*( c.y ));
-                    int b = (int)(255*( c.z ));
-                    int a = 255;
-                    argb = (a<<24 | r<<16 | g<<8 | b); 
-            	}
-                for ( Light light : lights.values() )
-                {
-                	
-                }
-            	// Here is an example of how to calculate the pixel value.
-
-
-        		Vector3d rayDir = new Vector3d();
-        		rayDir.normalize(ray.viewDirection);
-        		
-        		
-                
-                // update the render image
-                render.setPixel(j, i, argb);
-            }
-        }
-        
-        // save the final render image
-        render.save();
-        
-        // wait for render viewer to close
-        render.waitDone();
-        
-    }
-	/**
-	 * Shoot a shadow ray in the scene and get the result.
-	 * 
-	 * @param result Intersection result from raytracing. 
-	 * @param light The light to check for visibility.
-	 * @param root The scene node.
-	 * @param shadowResult Contains the result of a shadow ray test.
-	 * @param shadowRay Contains the shadow ray used to test for visibility.
-	 * 
-	 * @return True if a point is in shadow, false otherwise. 
-	 */
-	public static boolean inShadow(final IntersectResult result, final Light light, final SceneNode root, IntersectResult shadowResult, Ray shadowRay) {
-		
-		// TODO: Objective 5: check for shdows and use it in your lighting computation
-		
-		return false;
-	}    
+	 
 }

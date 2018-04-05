@@ -92,43 +92,11 @@ public class Mesh extends Intersectable {
 				result.t = t;
 				ray.getPoint( t, result.p );
 				result.material = material;
-				calcFaceNormal( faceVerts, result.n );
+				result.n.cross( e0, e1 );
 			}
 			else
 				continue;
 		}
 	}
-
-	private static void calcFaceNormal( Vertex[] faceVerts, Vector3d normalOut )
-	{
-		if( normalOut == null )
-			return;
-		
-		Vector3d v = new Vector3d( faceVerts[2].p );
-		v.sub( faceVerts[0].p );
-		
-		Vector3d u = new Vector3d( faceVerts[1].p );
-		u.sub( faceVerts[0].p );
-		
-		normalOut.cross( u, v );
-		
-	}
 	
-	private static double intersectPlane( Ray ray, Vector3d n )
-	{
-		Vector3d invEye = new Vector3d( ray.eyePoint );
-    	invEye.scale( -1.0 );
-        
-    	n.normalize();
-        double t = invEye.dot( n )/ray.viewDirection.dot( n );
-		
-		return t;
-	}
-	
-	private static boolean pointBoundedByFace( Point3d p, Vertex[] face )
-	{
-		
-		
-		return false;
-	}
 }
